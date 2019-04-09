@@ -3,15 +3,25 @@ extern crate postgres;
 extern crate serde_json;
 
 use nonogram::Nonogram;
-use postgres::{Connection, TlsMode};
+use openssl::ssl::{SslConnector, SslMethod};
+use postgres::{Client, NoTls};
+use std::path::Path;
+use tokio_postgres_openssl::MakeTlsConnector;
 
 use std::error::Error;
 
-pub fn push_to_postgres(puzzles: &[Nonogram], addr: &str) -> Result<(), Box<Error>> {
-    let conn = Connection::connect(addr, TlsMode::None)?;
+pub fn push_to_postgres(puzzles: &[Nonogram], addr: &str, cert: Option<&str>) -> Result<(), Box<Error>> {
+    let mut client = if let Some(path) = cert {
+        let mut ssl_builder = SslConnector::builder(SslMethod::tls())?;
+        ssl_builder.set_ca_file(Path::new(&path))?;
+        let ssl_connector = MakeTlsConnector::new(ssl_builder.build());
+        Client::connect(addr, ssl_connector)?
+    } else { 
+        Client::connect(addr, NoTls)?
+    };
 
     println!("Creating the table if it doesn't already exist.");
-    conn.execute(
+    client.execute(
         "CREATE TABLE IF NOT EXISTS puzzle(
             id integer GENERATED ALWAYS AS IDENTITY,
             height integer NOT NULL CHECK (height > 0 AND height % 5 = 0),
@@ -28,7 +38,7 @@ pub fn push_to_postgres(puzzles: &[Nonogram], addr: &str) -> Result<(), Box<Erro
     )?;
 
     println!("Inserting new puzzles into the table");
-    let insert_stmt = conn.prepare(
+    let insert_stmt = client.prepare(
         "INSERT INTO puzzle (
             height,
             width,
@@ -58,7 +68,7 @@ pub fn push_to_postgres(puzzles: &[Nonogram], addr: &str) -> Result<(), Box<Erro
                 .map(|row| row.iter().cloned().collect())
                 .collect::<Vec<Vec<u8>>>(),
         )?;
-        insert_stmt.execute(&[
+        client.execute(&insert_stmt, &[
             &height,
             &width,
             &hash,

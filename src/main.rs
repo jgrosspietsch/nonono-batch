@@ -82,6 +82,13 @@ fn main() -> Result<(), Box<Error>> {
             .multiple(false)
             .required(false)
         )
+        .arg(Arg::with_name("cert")
+            .help("PostgreSQL connection CA cert")
+            .long("cert")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+        )
         .get_matches();
 
     let number: usize = match matches.value_of("number").unwrap().parse() {
@@ -114,14 +121,15 @@ fn main() -> Result<(), Box<Error>> {
 
     let outfile = matches.value_of("outfile");
     let addr = matches.value_of("connection");
+    let cert = matches.value_of("cert");
 
     println!("Number of puzzles: {}", number);
     println!("Dimension permutations: {:?}", dimensions);
     if let Some(path) = outfile {
         println!("Outfile path: {}", path)
     }
-    if let Some(addr) = addr {
-        println!("PostgreSQL addr: {}", addr);
+    if addr.is_some() {
+        println!("PostgreSQL upload: YES");
     }
 
     let puzzles = build_puzzles(dimensions, number);
@@ -133,7 +141,7 @@ fn main() -> Result<(), Box<Error>> {
     }
 
     if addr.is_some() {
-        db::push_to_postgres(&puzzles, addr.unwrap())?;
+        db::push_to_postgres(&puzzles, addr.unwrap(), cert)?;
     }
 
     Ok(())

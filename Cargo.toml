@@ -9,6 +9,8 @@ clap = "2.32"
 hashbrown = "0.1"
 nonogram = { git = "https://github.com/jgrosspietsch/nonogram-rs"}
 num_cpus = "1.10"
+openssl = "0.10"
 pbr = "1.0"
-postgres = {version = "0.15", features = ["with-serde_json"] }
+postgres = { version = "0.16.0-rc.1", features = ["with-serde_json-1"] }
 serde_json = "1.0"
+tokio-postgres-openssl = "0.1.0-rc.1"
