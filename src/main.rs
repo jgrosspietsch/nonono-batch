@@ -1,8 +1,9 @@
 extern crate clap;
 extern crate serde_json;
 
-mod db;
+mod dynamo;
 mod file;
+mod postgres;
 mod process;
 
 use clap::{App, Arg};
@@ -89,6 +90,13 @@ fn main() -> Result<(), Box<Error>> {
             .multiple(false)
             .required(false)
         )
+        .arg(Arg::with_name("table")
+            .help("DynamoDB table name")
+            .long("table")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+        )
         .get_matches();
 
     let number: usize = match matches.value_of("number").unwrap().parse() {
@@ -141,7 +149,11 @@ fn main() -> Result<(), Box<Error>> {
     }
 
     if addr.is_some() {
-        db::push_to_postgres(&puzzles, addr.unwrap(), cert)?;
+        postgres::push_to_postgres(&puzzles, addr.unwrap(), cert)?;
+    }
+
+    if let Some(table) = matches.value_of("table") {
+        dynamo::push_to_dynamo(&puzzles, table)?;
     }
 
     Ok(())

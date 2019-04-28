@@ -10,13 +10,17 @@ use tokio_postgres_openssl::MakeTlsConnector;
 
 use std::error::Error;
 
-pub fn push_to_postgres(puzzles: &[Nonogram], addr: &str, cert: Option<&str>) -> Result<(), Box<Error>> {
+pub fn push_to_postgres(
+    puzzles: &[Nonogram],
+    addr: &str,
+    cert: Option<&str>,
+) -> Result<(), Box<Error>> {
     let mut client = if let Some(path) = cert {
         let mut ssl_builder = SslConnector::builder(SslMethod::tls())?;
         ssl_builder.set_ca_file(Path::new(&path))?;
         let ssl_connector = MakeTlsConnector::new(ssl_builder.build());
         Client::connect(addr, ssl_connector)?
-    } else { 
+    } else {
         Client::connect(addr, NoTls)?
     };
 
@@ -68,14 +72,17 @@ pub fn push_to_postgres(puzzles: &[Nonogram], addr: &str, cert: Option<&str>) ->
                 .map(|row| row.iter().cloned().collect())
                 .collect::<Vec<Vec<u8>>>(),
         )?;
-        client.execute(&insert_stmt, &[
-            &height,
-            &width,
-            &hash,
-            &row_segments,
-            &column_segments,
-            &completed_grid,
-        ])?;
+        client.execute(
+            &insert_stmt,
+            &[
+                &height,
+                &width,
+                &hash,
+                &row_segments,
+                &column_segments,
+                &completed_grid,
+            ],
+        )?;
     }
 
     Ok(())
